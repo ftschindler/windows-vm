@@ -1,0 +1,13 @@
+{
+    "__comment__": "https://github.com/tcort/markdown-link-check#config-file-format",
+    "ignorePatterns": [
+        {
+            "__comment__": "The internet is broken these days, only check internal links :/",
+            "pattern": "^https://"
+        },
+        {
+            "__comment__": "The internet is broken these days, only check internal links :/",
+            "pattern": "^http://"
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "default": true,
+    // MD013: We do not care about line length and disable reflow (needs further investigation)
+    //        https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md013
+    "MD013": false,
+    // MD028: We want to allow for blank line inside blockquote as we treat those as two separate quotes after one another
+    //        https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md028
+    "MD028": false,
+    // MD029: We prefer ordered lists as 1., 2., ... to be also readable in source (as opposed to 1., 1., ...)
+    //        https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md029
+    "MD029": { "style": "one_or_ordered" },
+    // MD033: We do not want any HTML
+    //        https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md033
+    "MD033": { "allowed_elements": [] },
+    // MD041: We either want a front matter with title or the first line needs to be a heading
+    //        https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md#md041
+    "MD041": { "level": 1, "front_matter_title": "^\\s*title\\s*[:=]" }
+  }
+}

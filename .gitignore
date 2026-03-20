@@ -1,0 +1,14 @@
+# Credentials
+.credentials/
+
+# Environment variables (contains tokens)
+.env
+
+# Vagrant state
+.vagrant/
+
+# Synced folder runtime files (keep directory but ignore flag files)
+synced/admin-ready
+
+# VirtualBox disk files
+*.vdi
