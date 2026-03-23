@@ -1,0 +1,143 @@
+---
+name: Build VM
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-vm-libvirt:
+    name: Build VM with libvirt
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Free up disk space
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        echo "Disk space after cleanup:"
+        df -h
+
+    - name: Install KVM and libvirt
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          qemu-kvm \
+          libvirt-daemon-system \
+          libvirt-clients \
+          libvirt-dev \
+          bridge-utils \
+          virt-manager \
+          libguestfs-tools \
+          libosinfo-bin
+
+    - name: Enable KVM group permissions
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+        # Make /dev/kvm accessible without root
+        sudo chmod 666 /dev/kvm
+
+    - name: Configure libvirt for unprivileged access
+      run: |
+        # Add current user to libvirt group
+        sudo usermod -aG kvm,libvirt "$USER"
+        # Configure libvirt unix socket permissions
+        echo 'unix_sock_group = "libvirt"' | sudo tee -a /etc/libvirt/libvirtd.conf
+        echo 'unix_sock_rw_perms = "0770"' | sudo tee -a /etc/libvirt/libvirtd.conf
+        echo 'auth_unix_ro = "none"' | sudo tee -a /etc/libvirt/libvirtd.conf
+        echo 'auth_unix_rw = "none"' | sudo tee -a /etc/libvirt/libvirtd.conf
+
+    - name: Start libvirt service
+      run: |
+        sudo systemctl enable --now libvirtd
+        sudo systemctl restart libvirtd
+        # Wait for libvirt to be ready
+        sleep 5
+
+    - name: Install Vagrant
+      run: |
+        wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+        sudo apt-get update && sudo apt-get install -y vagrant
+
+    - name: Install vagrant-libvirt plugin
+      run: |
+        vagrant plugin install vagrant-libvirt
+
+    - name: Generate credentials
+      run: |
+        bash ./generate-credentials.sh
+
+    - name: Create .env file
+      run: |
+        echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" > .env
+
+    - name: Verify KVM support
+      run: |
+        lsmod | grep kvm
+        ls -la /dev/kvm
+        kvm-ok || true
+
+    - name: Set up libvirt network
+      run: |
+        # Ensure default network is active (using sg to activate group membership)
+        sg libvirt -c 'virsh net-start default' || true
+        sg libvirt -c 'virsh net-autostart default'
+        sg libvirt -c 'virsh net-list --all'
+
+    - name: Build VM with libvirt provider
+      env:
+        LIBVIRT_DEFAULT_URI: qemu:///system
+      run: |
+        # Use newgrp to activate libvirt group membership in current session
+        # This allows vagrant to access libvirt without sudo
+        sg libvirt -c './vagrant_provision.bash'
+
+        echo "VM build successful!"
+
+    - name: Verify VM state
+      if: always()
+      run: |
+        virsh --connect qemu:///system list --all || true
+        sg libvirt -c 'vagrant status' || true
+
+    - name: Get Vagrant logs
+      if: failure()
+      run: |
+        echo "=== Vagrant Status ==="
+        sg libvirt -c './vagrant.sh status' || true
+        echo ""
+        echo "=== Libvirt VMs ==="
+        virsh --connect qemu:///system list --all || true
+        echo ""
+        echo "=== Libvirt Logs ==="
+        sudo journalctl -u libvirtd --no-pager -n 100 || true
+        echo ""
+        echo "=== Vagrant Machine Logs ==="
+        if [ -d .vagrant/machines/default/libvirt ]; then
+          find .vagrant/machines/default/libvirt -type f -name "*.log" -exec echo "File: {}" \; -exec cat {} \; || true
+        fi
+
+    - name: Cleanup VM
+      if: always()
+      run: |-
+        # Use sg libvirt to run vagrant destroy without sudo
+        sg libvirt -c './vagrant.sh destroy -f' || true
+        # Clean up any leftover libvirt resources
+        virsh --connect qemu:///system list --all --name | grep -i windows | xargs -r -I {} virsh --connect qemu:///system destroy {} || true
+        virsh --connect qemu:///system list --all --name | grep -i windows | xargs -r -I {} virsh --connect qemu:///system undefine {} --remove-all-storage || true

@@ -90,24 +90,45 @@ export ADMIN_PASSWORD
 USER_PASSWORD="$(cat "${USER_PASSWORD_FILE}")"
 export USER_PASSWORD
 
+# Detect provider (default to libvirt for CI compatibility)
+PROVIDER="${VAGRANT_DEFAULT_PROVIDER:-libvirt}"
+info "Using provider: ${PROVIDER}"
+echo ""
+
 info "Starting full provisioning workflow..."
 echo ""
 
-# Check and install required Vagrant plugins
+# Check and install required Vagrant plugins based on provider
 info "Checking for required Vagrant plugins..."
-if ! vagrant plugin list | grep -q 'vagrant-vbguest'; then
-	info "Installing vagrant-vbguest plugin..."
-	vagrant plugin install vagrant-vbguest
-	success "Plugin installed"
-else
-	info "vagrant-vbguest plugin already installed"
+
+if [[ "${PROVIDER}" == "libvirt" ]]; then
+	if ! vagrant plugin list | grep -q 'vagrant-libvirt'; then
+		info "Installing vagrant-libvirt plugin..."
+		vagrant plugin install vagrant-libvirt
+		success "Plugin installed"
+	else
+		info "vagrant-libvirt plugin already installed"
+	fi
+elif [[ "${PROVIDER}" == "virtualbox" ]]; then
+	if ! vagrant plugin list | grep -q 'vagrant-vbguest'; then
+		info "Installing vagrant-vbguest plugin..."
+		vagrant plugin install vagrant-vbguest
+		success "Plugin installed"
+	else
+		info "vagrant-vbguest plugin already installed"
+	fi
 fi
 echo ""
 
 # Phase 1: Initial provisioning as vagrant user
 info "Phase 1: Setting up hardware and creating user accounts (running as vagrant user)..."
 info "Note: VM will reload inbetween to update PATH and users"
-vagrant up
+
+if [[ "${PROVIDER}" != "libvirt" ]]; then
+	vagrant up --provider="${PROVIDER}"
+else
+	vagrant up
+fi
 
 # Wait for admin-ready flag
 info "Waiting for admin user to be ready..."
