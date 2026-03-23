@@ -48,12 +48,13 @@ jobs:
         sudo apt-get install -y powershell
 
     - name: Validate PowerShell syntax
-      run: |-
+      run: |
         echo "Validating PowerShell scripts..."
         for script in provision_*.ps1; do
           echo "Checking $script..."
           pwsh -NoProfile -Command "
             \$ErrorActionPreference = 'Stop'
+            \$errors = @()
             \$null = [System.Management.Automation.Language.Parser]::ParseFile(
                 '$script',
                 [ref]\$null,
