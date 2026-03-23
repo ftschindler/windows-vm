@@ -38,6 +38,7 @@ jobs:
           qemu-kvm \
           libvirt-daemon-system \
           libvirt-clients \
+          libvirt-dev \
           bridge-utils \
           virt-manager \
           libguestfs-tools \
