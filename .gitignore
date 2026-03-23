@@ -10,5 +10,6 @@
 # Synced folder runtime files (keep directory but ignore flag files)
 synced/admin-ready
 
-# VirtualBox disk files
+# Virtual machine disk files
 *.vdi
+*.qcow2
