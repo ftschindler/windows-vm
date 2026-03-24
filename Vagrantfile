@@ -44,13 +44,11 @@ Vagrant.configure("2") do |config|
 
   # VirtualBox provider
   config.vm.provider "virtualbox" do |vb, override|
-    # Create Dev Drive disk if it doesn't exist (only when VBoxManage is available)
+    # Create Dev Drive disk if it doesn't exist
     devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
     unless File.exist?(devdrive_disk)
-      if system("which VBoxManage > /dev/null 2>&1")
-        puts "Creating Dev Drive disk (500GB) for VirtualBox..."
-        system("VBoxManage createhd --filename '#{devdrive_disk}' --size #{500 * 1024}")
-      end
+      puts "Creating Dev Drive disk (500GB) for VirtualBox..."
+      system("VBoxManage createhd --filename '#{devdrive_disk}' --size #{500 * 1024}")
     end
 
     vb.gui = true

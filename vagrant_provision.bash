@@ -127,7 +127,7 @@ info "Note: VM will reload inbetween to update PATH and users"
 if [[ "${PROVIDER}" != "libvirt" ]]; then
 	vagrant up --provider="${PROVIDER}"
 else
-	vagrant up --provider=libvirt
+	vagrant up
 fi
 
 # Wait for admin-ready flag
