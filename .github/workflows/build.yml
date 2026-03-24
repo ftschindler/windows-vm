@@ -95,25 +95,38 @@ jobs:
 
     - name: Set up libvirt network
       run: |
-        # Ensure default network is active (using sg to activate group membership)
-        sg libvirt -c 'virsh net-start default' || true
-        sg libvirt -c 'virsh net-autostart default'
-        sg libvirt -c 'virsh net-list --all'
+        # Wait for libvirt to be fully ready before proceeding
+        for i in $(seq 1 15); do
+          if sudo virsh list > /dev/null 2>&1; then
+            echo "libvirt is ready"
+            break
+          fi
+          echo "Waiting for libvirt to be ready ($i/15)..."
+          sleep 1
+        done
+        # Define the default network if it is not already known to libvirt
+        if ! sudo virsh net-list --all | grep -q 'default'; then
+          sudo virsh net-define /usr/share/libvirt/networks/default.xml
+        fi
+        sudo virsh net-start default || true
+        sudo virsh net-autostart default || true
+        sudo virsh net-list --all
 
     - name: Build VM with libvirt provider
       env:
         LIBVIRT_DEFAULT_URI: qemu:///system
+        VAGRANT_DEFAULT_PROVIDER: libvirt
       run: |
-        # Use newgrp to activate libvirt group membership in current session
-        # This allows vagrant to access libvirt without sudo
+        # sg libvirt activates the libvirt group membership so vagrant-libvirt
+        # can access the system libvirt socket without running vagrant as root.
         sg libvirt -c './vagrant_provision.bash'
-
         echo "VM build successful!"
 
     - name: Verify VM state
       if: always()
       run: |
-        virsh --connect qemu:///system list --all || true
+        sudo virsh list --all || true
+        # vagrant must not run as root, so use sg libvirt for group membership
         sg libvirt -c 'vagrant status' || true
 
     - name: Get Vagrant logs
@@ -123,7 +136,7 @@ jobs:
         sg libvirt -c './vagrant.sh status' || true
         echo ""
         echo "=== Libvirt VMs ==="
-        virsh --connect qemu:///system list --all || true
+        sudo virsh list --all || true
         echo ""
         echo "=== Libvirt Logs ==="
         sudo journalctl -u libvirtd --no-pager -n 100 || true
@@ -136,8 +149,8 @@ jobs:
     - name: Cleanup VM
       if: always()
       run: |-
-        # Use sg libvirt to run vagrant destroy without sudo
+        # vagrant must not run as root, so use sg libvirt for group membership
         sg libvirt -c './vagrant.sh destroy -f' || true
         # Clean up any leftover libvirt resources
-        virsh --connect qemu:///system list --all --name | grep -i windows | xargs -r -I {} virsh --connect qemu:///system destroy {} || true
-        virsh --connect qemu:///system list --all --name | grep -i windows | xargs -r -I {} virsh --connect qemu:///system undefine {} --remove-all-storage || true
+        sudo virsh list --all --name | grep -i windows | xargs -r -I {} sudo virsh destroy {} || true
+        sudo virsh list --all --name | grep -i windows | xargs -r -I {} sudo virsh undefine {} --remove-all-storage || true
