@@ -79,6 +79,7 @@ jobs:
     - name: Install vagrant-libvirt plugin
       run: |
         vagrant plugin install vagrant-libvirt
+        vagrant plugin install vagrant-reload
 
     - name: Generate credentials
       run: |
@@ -109,7 +110,10 @@ jobs:
         if ! sudo virsh net-list --all | grep -q 'default'; then
           sudo virsh net-define /usr/share/libvirt/networks/default.xml
         fi
-        sudo virsh net-start default || true
+        # Only start if not already active
+        if ! sudo virsh net-list --all | grep 'default' | grep -q 'active'; then
+          sudo virsh net-start default
+        fi
         sudo virsh net-autostart default || true
         sudo virsh net-list --all
 
