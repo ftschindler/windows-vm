@@ -38,15 +38,19 @@ Vagrant.configure("2") do |config|
     config.winrm.password = "vagrant"
   end
 
-  # Create Dev Drive disk if it doesn't exist (must happen before provider config)
-  devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
-  unless File.exist?(devdrive_disk)
-    puts "Creating Dev Drive disk (500GB)..."
-    system("VBoxManage createhd --filename '#{devdrive_disk}' --size #{500 * 1024}")
-  end
+  # ============================================================================
+  # Provider-specific configuration
+  # ============================================================================
 
-  # VirtualBox provider settings
-  config.vm.provider "virtualbox" do |vb|
+  # VirtualBox provider
+  config.vm.provider "virtualbox" do |vb, override|
+    # Create Dev Drive disk if it doesn't exist
+    devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
+    unless File.exist?(devdrive_disk)
+      puts "Creating Dev Drive disk (500GB) for VirtualBox..."
+      system("VBoxManage createhd --filename '#{devdrive_disk}' --size #{500 * 1024}")
+    end
+
     vb.gui = true
     vb.name = "windows-dev-throwaway"
     vb.memory = "8192"
@@ -54,13 +58,41 @@ Vagrant.configure("2") do |config|
 
     # Attach Dev Drive disk to SATA port 1
     vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', devdrive_disk]
+
+    # Auto install guest additions (requires vagrant-vbguest plugin)
+    if Vagrant.has_plugin?("vagrant-vbguest")
+      override.vbguest.auto_update = true
+    end
+
+    # Use VirtualBox-native shared folders
+    override.vm.synced_folder "./synced", "C:/vagrant", type: "virtualbox"
   end
 
-  # Auto install guest additions
-  config.vbguest.auto_update = true
+  # Libvirt provider (for KVM/QEMU)
+  config.vm.provider "libvirt" do |libvirt, override|
+    libvirt.driver = "kvm"
+    libvirt.memory = 8192
+    libvirt.cpus = 4
+    libvirt.machine_type = "pc-q35-6.2"
+    libvirt.cpu_mode = "host-passthrough"
+    libvirt.nic_model_type = "e1000"
+    libvirt.graphics_type = "vnc"
+    libvirt.graphics_ip = "127.0.0.1"
+    libvirt.video_type = "qxl"
 
-  # Synced folder for provisioning scripts
-  config.vm.synced_folder "./synced", "C:/vagrant", type: "virtualbox"
+    # Create Dev Drive disk (500GB)
+    libvirt.storage :file, size: '500G', type: 'qcow2', bus: 'sata', device: 'sdb'
+
+    # Use rsync for synced folders (more reliable with Windows on libvirt)
+    # Note: Requires rsync to be available in the Windows VM (installed via provisioning)
+    override.vm.synced_folder "./synced", "C:/vagrant", type: "rsync",
+      rsync__exclude: [".git/", "*.vdi", "*.qcow2"],
+      rsync__args: ["--verbose", "--archive", "--delete", "-z"]
+  end
+
+  # Default synced folder if no provider-specific override
+  # This is a fallback, but providers should define their own above
+  config.vm.synced_folder "./synced", "C:/vagrant"
 
   # ============================================================================
   # Phase 1: Hardware and User Setup (runs as vagrant user)

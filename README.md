@@ -1,8 +1,10 @@
 # Windows Development Environment with Vagrant
 
-> Automated Windows 11 development VM setup using Vagrant and VirtualBox, designed for developers who need a clean, reproducible Windows development environment.
+> Automated Windows 11 development VM setup using Vagrant with VirtualBox or KVM/libvirt, designed for developers who need a clean, reproducible Windows development environment.
 
 This project provides a fully automated way to provision a Windows 11 virtual machine with proper security practices (no hardcoded passwords), a dedicated development drive, and common development tools pre-installed.
+
+**Supported providers:** libvirt/KVM (default, recommended for Linux and CI) and VirtualBox (opt-in for cross-platform GUI)
 
 ## Features
 
@@ -12,11 +14,12 @@ This project provides a fully automated way to provision a Windows 11 virtual ma
 - ⚡ **Fully automated provisioning** - One-command setup with multi-phase credential switching
 - 🎯 **Auto-login configured** - VM boots directly into the `user` account with a welcome screen
 - 📦 **Pre-installed development tools** - Git, Node.js, Python, and more via WinGet
-- 🔄 **Guest Additions** - Automatically managed via vagrant-vbguest plugin
+- 🔄 **Multi-provider support** - Works with KVM/libvirt (default, headless/CI) or VirtualBox (opt-in GUI)
 
 ## Prerequisites
 
-- **VirtualBox** - Virtualization platform ([installed](https://www.virtualbox.org/) on the host)
+### Required for All Setups
+
 - **Vagrant** - VM orchestration tool ([installed](https://www.vagrantup.com/) on the host)
 - **GitHub Personal Access Token** - Required for WinGet installation to avoid API rate limiting
 
@@ -32,21 +35,98 @@ This project provides a fully automated way to provision a Windows 11 virtual ma
    GITHUB_TOKEN=your_token_here
    ```
 
+### Provider-Specific Requirements
+
+Choose **one** provider based on your host OS and use case:
+
+#### KVM/libvirt (Default - Linux only)
+
+**Recommended** - This is the default provider and what CI uses for testing.
+
+**Arch Linux setup:**
+
+```bash
+# Install virtualization packages
+sudo pacman -S qemu-full libvirt virt-manager dnsmasq iptables-nft \
+               ebtables dmidecode bridge-utils openbsd-netcat
+
+# Install vagrant-libvirt plugin
+vagrant plugin install vagrant-libvirt
+
+# Enable and start libvirt service
+sudo systemctl enable --now libvirtd.service
+sudo systemctl enable --now virtlogd.service
+
+# Add your user to libvirt group (logout/login required)
+sudo usermod -aG libvirt $USER
+
+# Verify KVM support
+lsmod | grep kvm  # Should show kvm_intel or kvm_amd
+
+# Test libvirt connection
+virsh -c qemu:///system list --all
+```
+
+**Note:** KVM/libvirt runs headless by default. To view the VM GUI:
+
+```bash
+# Find the VM domain name
+virsh -c qemu:///system list --all
+
+# Connect with virt-viewer (install: sudo pacman -S virt-viewer)
+virt-viewer -c qemu:///system windows-dev-throwaway
+```
+
+#### VirtualBox (Opt-in - All platforms)
+
+Best for: Local development with GUI on any OS (Windows, macOS, Linux)
+
+- **VirtualBox** - [Download and install](https://www.virtualbox.org/)
+- **vagrant-vbguest plugin** - Auto-installed by provisioning script
+
+```bash
+vagrant plugin install vagrant-vbguest
+```
+
+**Using VirtualBox provider:**
+
+```bash
+# Specify provider when running vagrant commands
+./vagrant.sh up --provider=virtualbox
+
+# Or set default provider
+export VAGRANT_DEFAULT_PROVIDER=virtualbox
+./vagrant.sh up
+```
+
 ## Quick Start
+
+**KVM/libvirt (default):**
 
 ```bash
 bash ./vagrant_provision.bash
 ```
 
+**VirtualBox (opt-in):**
+
+```bash
+# Set provider and run
+export VAGRANT_DEFAULT_PROVIDER=virtualbox
+bash ./vagrant_provision.bash
+```
+
 This automated script:
 
-1. Auto-installs `vagrant-vbguest` plugin if needed
+1. Auto-installs required Vagrant plugins if needed
 2. Generates random passwords (stored in `.credentials/`)
 3. Provisions the VM through three phases with automatic reloads
 4. Installs development tools (see below)
 5. Configures autologon for the `user` account
 
-**After provisioning**: View the VM GUI to see auto-login and welcome popup.
+**After provisioning**:
+
+- **KVM/libvirt (default):** Connect with `virt-viewer -c qemu:///system windows-dev-throwaway`
+- **VirtualBox (opt-in):** View the VM GUI to see auto-login and welcome popup
 
 **Installed tools**: See [provision_install_tools.ps1](provision_install_tools.ps1) for the full list.
 
@@ -160,29 +240,16 @@ winget install --id YourPackage.ID --silent --accept-source-agreements --accept-
 
 ### Adjusting Dev Drive Size
 
-Modify the `devdrive.vdi` size in [provision_setup_drives.ps1](provision_setup_drives.ps1).
+**KVM/libvirt (default):** Modify the disk size in the Vagrantfile libvirt provider configuration (`libvirt.storage :file, size: '500G'`).
 
-## Contributing
+**VirtualBox (opt-in):** The disk size is configured when creating `devdrive.vdi`. To change it, delete the `.vdi` file and modify the size in the Vagrantfile (line with `VBoxManage createhd`).
 
-Contributions are welcome! This project is in the public domain (see License below).
+## Continuous Integration
 
-If you have improvements or bug fixes:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-Feel free to open issues for bugs, feature requests, or questions.
+This project includes comprehensive CI workflows to ensure code quality and verify VM provisioning works correctly.
 
 ## License
 
 This project is released into the **public domain** under the [Unlicense](UNLICENSE.md).
 
 You are free to use, modify, and distribute this code for any purpose without restriction.
-
-## Acknowledgments
-
-- Built with [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/)
-- Uses [WinGet](https://github.com/microsoft/winget-cli) for package management
-- Inspired by the need for reproducible Windows development environments
