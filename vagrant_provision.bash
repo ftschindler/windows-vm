@@ -130,6 +130,12 @@ else
 	vagrant up
 fi
 
+# Trigger rsync of synced folder now that rsync is installed on the guest
+if [[ "${PROVIDER}" == "libvirt" ]]; then
+	info "Triggering initial rsync of synced folder (rsync now available on guest)..."
+	vagrant rsync || warning "rsync sync failed, continuing..."
+fi
+
 # Wait for admin-ready flag
 info "Waiting for admin user to be ready..."
 WAIT_COUNT=0
