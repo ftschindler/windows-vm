@@ -104,8 +104,6 @@ Vagrant.configure("2") do |config|
 
   # Only run these in Phase 1/2 (before admin credentials are active)
   unless use_admin
-    config.vm.provision "shell", name: "install-git", run: "once", inline: "winget install -e --id Git.Git --accept-package-agreements --accept-source-agreements; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }", powershell_args: "-ExecutionPolicy Bypass"
-
     config.vm.provision "install-tools", type: "shell", run: "once" do |s|
       s.path = "provision_install_tools.ps1"
       s.powershell_args = "-ExecutionPolicy Bypass"

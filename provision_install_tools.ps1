@@ -4,13 +4,20 @@ $progressPreference = 'SilentlyContinue'
 Write-Host "=== Installing Tools ==="
 
 $packages = @(
+    <#
+    We need WindowsTerminal before Git to ensure creation of a Git Bash profile.
+    #>
+    'Microsoft.WindowsTerminal',
+    'Git.Git',
+    <#
+    Ordering of the below should not matter.
+    #>
     '7zip.7zip',
     'astral-sh.uv',
     'BurntSushi.ripgrep.MSVC',
     'Chocolatey.Chocolatey',
     'cURL.cURL',
     'dandavison.delta',
-    'Git.Git',
     'GitHub.cli',
     'GnuWin32.Tar',
     'GnuWin32.UnZip',
@@ -21,7 +28,6 @@ $packages = @(
     'Microsoft.PowerShell',
     'Microsoft.PowerToys',
     'Microsoft.VisualStudioCode',
-    'Microsoft.WindowsTerminal',
     'Mozilla.Firefox.DeveloperEdition',
     'OpenJS.NodeJS.LTS',
     'Python.Python.3.13'

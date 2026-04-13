@@ -36,6 +36,7 @@ warning() {
 if [[ ! -f "${ENV_FILE}" ]]; then
 	echo "ERROR: .env file not found at: ${ENV_FILE}"
 	echo "Please create a .env file with GITHUB_TOKEN=<your-token>"
+	echo "-- have gh? --> echo \"GITHUB_TOKEN=\$(gh auth token)\" > .env"
 	exit 1
 fi
 
