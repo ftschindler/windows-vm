@@ -9,6 +9,7 @@ This project provides a fully automated way to provision a Windows 11 virtual ma
 - 🔧 **500GB Dev Drive** (D:) - Dedicated ReFS volume optimized for development work
 - 🔐 **Secure credential management** - Random passwords generated locally, never committed to source control
 - 👥 **Dual user setup** - `admin` account for WinRM management, `user` account for daily development
+- 🛡️ **UAC configured** - User has admin rights with one-click elevation for installs and system changes
 - ⚡ **Fully automated provisioning** - One-command setup with multi-phase credential switching
 - 🎯 **Auto-login configured** - VM boots directly into the `user` account with a welcome screen
 - 📦 **Pre-installed development tools** - Git, Node.js, Python, and more via WinGet
@@ -58,7 +59,7 @@ The provisioning happens in three phases with automatic credential switching:
 | --- | --- | --- |
 | **Phase 1** | `vagrant:vagrant` | Create 500GB Dev Drive, create `admin` and `user` accounts, install WinGet, create admin-ready flag, reload VM |
 | **Phase 2** | `vagrant:vagrant` | Install Git and development tools via WinGet, reload VM |
-| **Phase 3** | `admin:ADMIN_PASSWORD` | Setup welcome popup, remove vagrant user, configure autologon for `user` |
+| **Phase 3** | `admin:ADMIN_PASSWORD` | Configure UAC for user account, setup welcome popup, remove vagrant user, configure autologon for `user` |
 
 The Vagrantfile detects the admin-ready flag and switches credentials automatically between phases.
 
@@ -90,6 +91,22 @@ Passwords are stored in `.credentials/` (git-ignored):
 - `user.txt` - User account password (for autologon)
 
 Credentials are passed to VM only via environment variables, never hardcoded.
+
+## User Account Control (UAC)
+
+The `user` account is a member of the Administrators group but protected by User Account Control:
+
+- **Installing software** - UAC prompts "Do you want to allow this app to make changes?" - click **Yes**
+- **System modifications** - Protected by UAC consent prompts (no password required, just click confirmation)
+- **Development work** - Runs with standard user privileges until elevation is needed
+- **Security + Convenience** - Prevents accidental system changes while allowing one-click elevation
+
+**Why two accounts?**
+
+- `user` - Your daily development account (auto-login, UAC-protected admin rights)
+- `admin` - Reserved for Vagrant/WinRM infrastructure operations only
+
+This setup follows Windows development best practices: admin privileges when needed, UAC protection always active.
 
 ## Common Commands
 
@@ -133,6 +150,24 @@ bash ./vagrant_provision.bash
 ```bash
 ls synced/admin-ready
 ```
+
+**Verify UAC settings (from within VM):**
+
+Open PowerShell as administrator and run:
+
+```powershell
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" | Select-Object EnableLUA, ConsentPromptBehaviorAdmin
+```
+
+Expected output: `EnableLUA = 1`, `ConsentPromptBehaviorAdmin = 5`
+
+**Check if user is in Administrators group (from within VM):**
+
+```powershell
+Get-LocalGroupMember -Group "Administrators"
+```
+
+Should show both `admin` and `user` accounts.
 
 ## Project Structure
 

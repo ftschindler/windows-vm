@@ -22,8 +22,10 @@ if ($userExists) {
     New-LocalUser -Name $username -Password $securePwd -PasswordNeverExpires:$true -UserMayNotChangePassword:$false
 }
 
-# Ensure user is in Users group and NOT in Administrators (idempotent)
+# Add user to both Users and Administrators groups (idempotent)
+# User will still be protected by UAC prompts for administrative actions
 Add-LocalGroupMember -Group 'Users' -Member $username -ErrorAction SilentlyContinue
-Remove-LocalGroupMember -Group 'Administrators' -Member $username -ErrorAction SilentlyContinue
+Add-LocalGroupMember -Group 'Administrators' -Member $username -ErrorAction SilentlyContinue
 
+Write-Host "User added to Administrators group (UAC will still protect against unwanted changes)"
 Write-Host "=== User account setup complete ==="

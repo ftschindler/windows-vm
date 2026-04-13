@@ -48,7 +48,7 @@ Vagrant.configure("2") do |config|
   # VirtualBox provider settings
   config.vm.provider "virtualbox" do |vb|
     vb.gui = true
-    vb.name = "windows-dev-throwaway"
+    vb.name = "Windows Development Environment"
     vb.memory = "8192"
     vb.cpus = 4
 
@@ -120,6 +120,11 @@ Vagrant.configure("2") do |config|
   # ============================================================================
 
   if use_admin
+    config.vm.provision "configure-uac", type: "shell", run: "once" do |s|
+      s.path = "provision_configure_uac.ps1"
+      s.powershell_args = "-ExecutionPolicy Bypass"
+    end
+
     config.vm.provision "setup-user-startup", type: "shell", run: "once" do |s|
       s.path = "provision_setup_user_startup.ps1"
       s.powershell_args = "-ExecutionPolicy Bypass"
