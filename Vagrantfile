@@ -38,7 +38,9 @@ Vagrant.configure("2") do |config|
     config.winrm.password = "vagrant"
   end
 
-  # Create Dev Drive disk if it doesn't exist (must happen before provider config)
+  # Create Dev Drive disk if it doesn't exist. An existing devdrive.vdi is
+  # preserved across vagrant destroy cycles (see triggers below), so this
+  # only runs on first-time setup or after manually deleting the file.
   devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
   unless File.exist?(devdrive_disk)
     puts "Creating Dev Drive disk (500GB)..."
@@ -53,7 +55,8 @@ Vagrant.configure("2") do |config|
     vb.cpus = 4
 
     # Attach Dev Drive disk to SATA port 1
-    vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', devdrive_disk]
+    # Note: Using --nonrotational for SSD optimization
+    vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', devdrive_disk, '--nonrotational', 'on']
   end
 
   # Auto install guest additions
@@ -141,9 +144,33 @@ Vagrant.configure("2") do |config|
   # Triggers
   # ============================================================================
 
-  # Clean up host-side flags when VM is destroyed
+  # Preserve devdrive across VM destroy.
+  #
+  # Problem: vagrant destroy calls "VBoxManage unregistervm --delete" which
+  # deletes all attached disk files. Detaching the medium beforehand doesn't
+  # reliably work (hot-unplug fails while the VM is still running).
+  #
+  # Solution: move the .vdi to a temporary name before destroy (instant rename
+  # on the same filesystem), then move it back afterwards. VirtualBox can't
+  # delete a file that no longer exists at the expected path.
   config.trigger.before :destroy do |t|
-    t.info = "Cleaning up admin-ready flag"
-    t.run = { inline: "rm -f synced/admin-ready .vagrant/admin-transitioned" }
+    t.info = "Preserving Dev Drive data"
+    devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
+    devdrive_persist = devdrive_disk + ".persist"
+    t.run = { inline: "bash -c '\n" \
+      "VBoxManage storageattach \"Windows Development Environment\" --storagectl \"SATA Controller\" --port 1 --device 0 --medium none 2>&1 || true\n" \
+      "VBoxManage closemedium disk \"#{devdrive_disk}\" 2>&1 || true\n" \
+      "if [ -f \"#{devdrive_disk}\" ]; then mv \"#{devdrive_disk}\" \"#{devdrive_persist}\" && echo \"Dev Drive moved to safe location\"; fi\n" \
+      "'" }
+  end
+
+  config.trigger.after :destroy do |t|
+    t.info = "Restoring Dev Drive"
+    devdrive_disk = File.join(File.dirname(__FILE__), "devdrive.vdi")
+    devdrive_persist = devdrive_disk + ".persist"
+    t.run = { inline: "bash -c '\n" \
+      "if [ -f \"#{devdrive_persist}\" ]; then mv \"#{devdrive_persist}\" \"#{devdrive_disk}\" && echo \"Dev Drive restored\"; fi\n" \
+      "rm -f synced/admin-ready .vagrant/admin-transitioned\n" \
+      "'" }
   end
 end

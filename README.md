@@ -6,7 +6,7 @@ This project provides a fully automated way to provision a Windows 11 virtual ma
 
 ## Features
 
-- 🔧 **500GB Dev Drive** (D:) - Dedicated ReFS volume optimized for development work
+- 🔧 **500GB Dev Drive** (D:) - Dedicated NTFS volume optimized for development work, **persists across VM rebuilds**
 - 🔐 **Secure credential management** - Random passwords generated locally, never committed to source control
 - 👥 **Dual user setup** - `admin` account for WinRM management, `user` account for daily development
 - 🛡️ **UAC configured** - User has admin rights with one-click elevation for installs and system changes
@@ -57,7 +57,7 @@ The provisioning happens in three phases with automatic credential switching:
 
 | Phase | Credentials | Actions |
 | --- | --- | --- |
-| **Phase 1** | `vagrant:vagrant` | Create 500GB Dev Drive, create `admin` and `user` accounts, install WinGet, create admin-ready flag, reload VM |
+| **Phase 1** | `vagrant:vagrant` | Set up 500GB Dev Drive (reuses existing), create `admin` and `user` accounts, install WinGet, create admin-ready flag, reload VM |
 | **Phase 2** | `vagrant:vagrant` | Install Git and development tools via WinGet, reload VM |
 | **Phase 3** | `admin:ADMIN_PASSWORD` | Configure UAC for user account, setup welcome popup, remove vagrant user, configure autologon for `user` |
 
@@ -130,6 +130,14 @@ The [vagrant.sh](vagrant.sh) wrapper ensures correct env setup.
 bash ./vagrant_provision.bash
 ```
 
+**Note:** The Dev Drive (`devdrive.vdi`) persists when you destroy the VM, so your data on the D: drive is preserved. To completely wipe everything including the Dev Drive, manually delete `devdrive.vdi` before recreating:
+
+```bash
+./vagrant.sh destroy -f
+rm devdrive.vdi
+bash ./vagrant_provision.bash
+```
+
 ## Troubleshooting
 
 **Missing credentials error:**
@@ -138,7 +146,7 @@ bash ./vagrant_provision.bash
 bash ./generate-credentials.sh
 ```
 
-**Start over (destroy and recreate):**
+**Start over (destroy and recreate, preserves Dev Drive data):**
 
 ```bash
 ./vagrant.sh destroy -f
@@ -169,6 +177,16 @@ Get-LocalGroupMember -Group "Administrators"
 
 Should show both `admin` and `user` accounts.
 
+**Reset Dev Drive (delete all persistent data):**
+
+If you want to start with a fresh Dev Drive:
+
+```bash
+./vagrant.sh destroy -f
+rm devdrive.vdi
+bash ./vagrant_provision.bash
+```
+
 ## Project Structure
 
 ```text
@@ -178,6 +196,7 @@ Should show both `admin` and `user` accounts.
 ├── vagrant_provision.bash             # Automated provisioning orchestrator
 ├── generate-credentials.sh            # Random password generator
 ├── provision_*.ps1                    # PowerShell provisioning scripts
+├── devdrive.vdi                       # Persistent Dev Drive disk (git-ignored, survives VM destroy)
 ├── synced/                           # Shared folder between host and VM
 │   ├── admin-ready                   # Flag file for phase detection
 └── .credentials/                     # Generated passwords (git-ignored)
@@ -195,7 +214,7 @@ winget install --id YourPackage.ID --silent --accept-source-agreements --accept-
 
 ### Adjusting Dev Drive Size
 
-Modify the `devdrive.vdi` size in [provision_setup_drives.ps1](provision_setup_drives.ps1).
+Modify the `--size` parameter (in MB) in the `VBoxManage createhd` command in the [Vagrantfile](Vagrantfile). Then delete the existing `devdrive.vdi` and reprovision to create a new disk with the updated size.
 
 ## Contributing
 

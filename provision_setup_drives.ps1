@@ -21,6 +21,10 @@ if ($dvd -and $dvd.DriveLetter) {
 }
 
 # Step 2: Initialize and format the second disk as D:
+# The devdrive.vdi persists across VM destroy/recreate cycles, so the disk
+# may already be initialized and formatted from a previous VM. In that case
+# we just verify the drive letter is assigned and skip formatting to preserve
+# existing data.
 Write-Host ""
 Write-Host "Step 2: Setting up Dev Drive (Disk 1)..."
 $disk = Get-Disk -Number 1 -ErrorAction SilentlyContinue
