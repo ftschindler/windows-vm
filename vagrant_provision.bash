@@ -91,6 +91,23 @@ export ADMIN_PASSWORD
 USER_PASSWORD="$(cat "${USER_PASSWORD_FILE}")"
 export USER_PASSWORD
 
+# Unpack appearance export if not already present
+APPEARANCE_DIR="${SCRIPT_DIR}/synced/Win11AppearanceExport"
+APPEARANCE_ARCHIVE="${SCRIPT_DIR}/Win11AppearanceExport.tar.gz"
+
+if [[ ! -d "${APPEARANCE_DIR}" ]]; then
+	if [[ -f "${APPEARANCE_ARCHIVE}" ]]; then
+		info "Unpacking Win11AppearanceExport into synced/..."
+		tar xzf "${APPEARANCE_ARCHIVE}" -C "${SCRIPT_DIR}/synced/"
+		success "Appearance export unpacked to: ${APPEARANCE_DIR}"
+	else
+		warning "No Win11AppearanceExport.tar.gz found - skipping appearance restore data"
+	fi
+else
+	info "Appearance export already present at: ${APPEARANCE_DIR}"
+fi
+echo ""
+
 info "Starting full provisioning workflow..."
 echo ""
 

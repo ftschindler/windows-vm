@@ -16,21 +16,31 @@ if (-not (Test-Path $scriptDir)) {
 $psContent = @"
 `$flagFile = '$flagFile'
 
-# Exit if already shown
 if (Test-Path `$flagFile) {
     exit 0
 }
 
-# Show welcome message
+`$msg = "Hello! This is your first login as the 'user' account.``n``n"
+`$msg += "Theme / Appearance scripts are available in C:\vagrant\:``n"
+`$msg += "  - win11_appearance_dump.ps1  (export current settings)``n"
+`$msg += "  - win11_appearance_load.ps1  (restore saved settings)``n``n"
+
+if (Test-Path "C:\vagrant\Win11AppearanceExport") {
+    `$msg += "A saved appearance export was detected.``n"
+    `$msg += "Run the load script to restore your settings:``n"
+    `$msg += "  powershell -File C:\vagrant\win11_appearance_load.ps1``n``n"
+}
+
+`$msg += "This message will only appear once."
+
 Add-Type -AssemblyName PresentationFramework
 [System.Windows.MessageBox]::Show(
-    "Hello! This is your first login as the 'user' account.``n``nThis message will only appear once.",
+    `$msg,
     "Welcome to Windows Dev Environment",
     [System.Windows.MessageBoxButton]::OK,
     [System.Windows.MessageBoxImage]::Information
 )
 
-# Create flag to prevent showing again
 New-Item -ItemType File -Path `$flagFile -Force | Out-Null
 "@
 
