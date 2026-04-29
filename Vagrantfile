@@ -112,6 +112,11 @@ Vagrant.configure("2") do |config|
       s.powershell_args = "-ExecutionPolicy Bypass"
     end
 
+    config.vm.provision "uninstall-bloatware", type: "shell", run: "once" do |s|
+      s.path = "provision_uninstall_bloat.ps1"
+      s.powershell_args = "-ExecutionPolicy Bypass"
+    end
+
     config.vm.provision "install-vs-professional", type: "shell", run: "once" do |s|
       s.path = "provision_install_vs_professional.ps1"
       s.powershell_args = "-ExecutionPolicy Bypass"
