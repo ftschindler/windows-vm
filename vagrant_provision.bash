@@ -120,6 +120,13 @@ if ! vagrant plugin list | grep -q 'vagrant-vbguest'; then
 else
 	info "vagrant-vbguest plugin already installed"
 fi
+if ! vagrant plugin list | grep -q 'vagrant-reload'; then
+	info "Installing vagrant-reload plugin..."
+	vagrant plugin install vagrant-reload
+	success "Plugin installed"
+else
+	info "vagrant-reload plugin already installed"
+fi
 echo ""
 
 # Phase 1: Initial provisioning as vagrant user
