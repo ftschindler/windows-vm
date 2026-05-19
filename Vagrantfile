@@ -28,6 +28,14 @@ Vagrant.configure("2") do |config|
   # Check if we should use admin credentials (flag file exists on host)
   use_admin = File.exist?('synced/admin-ready')
 
+  # WinRM configuration for Windows VMs
+  config.winrm.timeout = 1800      # 30 minutes timeout
+  config.winrm.retry_limit = 30     # Retry 30 times
+  config.winrm.retry_delay = 10     # Wait 10 seconds between retries
+  config.vm.communicator = "winrm"
+  config.winrm.basic_auth_only = true
+  config.winrm.ssl_peer_verification = false
+
   if use_admin
     puts "INFO: Using admin credentials (admin-ready flag detected)"
     config.winrm.username = "admin"
