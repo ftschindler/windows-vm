@@ -68,7 +68,17 @@ Vagrant.configure("2") do |config|
   end
 
   # Auto install guest additions
-  config.vbguest.auto_update = true
+  # vagrant-vbguest 0.32.0 has a Ruby 3.x compatibility bug:
+  # - File.exists? was deprecated in Ruby 2.1 and removed in Ruby 3.2
+  # - Bug location: lib/vagrant-vbguest/hosts/virtualbox.rb:84
+  # - Plugin repo is archived: https://github.com/dotless-de/vagrant-vbguest
+  # Disable auto-update on Ruby 3.x to avoid the error
+  if RUBY_VERSION.split('.')[0].to_i >= 3
+    puts "INFO: Disabling vbguest auto-update (Ruby #{RUBY_VERSION} compatibility)"
+    config.vbguest.auto_update = false
+  else
+    config.vbguest.auto_update = true
+  end
 
   # Synced folder for provisioning scripts
   config.vm.synced_folder "./synced", "C:/vagrant", type: "virtualbox"
