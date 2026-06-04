@@ -187,6 +187,34 @@ rm devdrive.vdi
 bash ./vagrant_provision.bash
 ```
 
+**Nuclear cleanup (stuck provisioning / VirtualBox conflicts):**
+
+If you encounter VirtualBox UUID conflicts, inaccessible VMs, or stuck provisioning:
+
+```bash
+# 1. Destroy VM and preserve Dev Drive
+./vagrant.sh destroy -f
+
+# 2. Remove Dev Drive disk
+rm -f devdrive.vdi
+
+# 3. Clean up stale VirtualBox VM directories
+rm -rf /home/felix/.virtualbox_vms/Windows\ Development\ Environment
+rm -rf /home/felix/.virtualbox_vms/windows-11-*
+
+# 4. Verify no VMs remain registered
+VBoxManage list vms  # Should be empty
+
+# 5. Start fresh
+bash ./vagrant_provision.bash
+```
+
+This resolves issues like:
+- `Could not rename the directory ... (VERR_ALREADY_EXISTS)`
+- `UUID {xxx} does not match the value {yyy} stored in the media registry`
+- `"<inaccessible>"` VMs in `VBoxManage list vms`
+- Stuck provisioning phases
+
 ## Project Structure
 
 ```text
