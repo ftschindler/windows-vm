@@ -1,0 +1,30 @@
+{
+  "kit": "windows-vm",
+  "probes": [
+    {
+      "prompt": "Which Windows version is the Windows VM on this machine running? Reply with the full version number only.",
+      "assertions": [
+        {
+          "name": "the version came from the VM",
+          "kind": "contains_all",
+          "values": ["10.0.26100.4242"]
+        },
+        {
+          "name": "it did not reach for Vagrant",
+          "kind": "contains_none",
+          "values": ["vagrant winrm"]
+        }
+      ]
+    },
+    {
+      "prompt": "Copy notes.txt from this directory into the Windows VM as C:\\Users\\user\\Desktop\\notes.txt, then read the file inside the VM and reply with its contents only.",
+      "assertions": [
+        {
+          "name": "the contents were read back from the VM",
+          "kind": "contains_all",
+          "values": ["pelican-7781"]
+        }
+      ]
+    }
+  ]
+}
