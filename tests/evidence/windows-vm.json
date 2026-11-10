@@ -1,6 +1,10 @@
 {
   "files": [
     {
+      "path": "skills/windows-vm/PLAN.md",
+      "sha256": "e05c24e0a5c3ea647753e65975428f05e097da8674ed628c20a6e5bf9c46303f"
+    },
+    {
       "path": "skills/windows-vm/SKILL.md",
       "sha256": "29d5d4c434905639edc2034eb65a754d4d69e8521c4c607d6ca260dba6fd6306"
     },
@@ -24,7 +28,7 @@
   "kit": "windows-vm",
   "outcome": "pass",
   "recorded": {
-    "at": "2026-11-10T13:25:51Z",
+    "at": "2026-11-10T13:55:55Z",
     "by": "Felix Schindler <107669806+ftschindler@users.noreply.github.com>",
     "model": "github-copilot/claude-sonnet-5",
     "opencode_version": "1.19.4",
@@ -53,7 +57,7 @@
         }
       ],
       "prompt": "Which Windows version is the Windows VM on this machine running? Reply with the full version number only.",
-      "reply": "VM is configured. Let me check status and start it if needed.\nIt's already running.\nThe Windows VM is running version **10.0.26100.4242**."
+      "reply": "VM is configured. Let's start it if needed and run the version command.\nAlready running.\n10.0.26100.4242"
     },
     {
       "assertions": [
@@ -68,7 +72,7 @@
         }
       ],
       "prompt": "Copy notes.txt from this directory into the Windows VM as C:\\Users\\user\\Desktop\\notes.txt, then read the file inside the VM and reply with its contents only.",
-      "reply": "Good, VM is configured. Let me check notes.txt exists and the VM status.\nVM is already running, so I'll leave it running after the task.\npelican-7781"
+      "reply": "Already running, so I'll leave it running after.\npelican-7781"
     }
   ],
   "schema_version": 1

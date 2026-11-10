@@ -1,7 +1,7 @@
 # Journal
 
 Things learned while building the `windows-vm` kit that the onboarding and
-setup step (step 4 of [SKILL_PLAN.md](SKILL_PLAN.md)) has to handle.
+setup step (step 4 of [the plan](skills/windows-vm/PLAN.md)) has to handle.
 
 ## 2026-11-09: Vagrant plugins break when pacman upgrades Ruby
 

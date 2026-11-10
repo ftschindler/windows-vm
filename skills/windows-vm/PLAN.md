@@ -14,6 +14,41 @@ deterministic step is a uv-shebanged PEP 723 script in `scripts/`, the scripts
 have pytest tests, and each kit has a probe and recorded evidence (the "test
 certificate").
 
+## Status
+
+The skill does three of its four jobs. Setting up a new machine is the one
+left.
+
+| Job (section of `SKILL.md`) | State | What it is |
+| --- | --- | --- |
+| 1. Explain what this is | done | `SKILL.md` "Does this machine have a VM?", `references/what-this-is.md` |
+| 2. Get started and provision | **not started** | `check-host`, `provision`, `references/provisioning.md` |
+| 3. Start, stop and pause | done | `start`, `stop`, `pause`, `status` |
+| 4. Run a command, move files | done | `run` (with `--admin`), `copy-to`, `copy-from` |
+
+Also done: `where` and `configure`, the rule, `references/troubleshooting.md`,
+script, live and conformance tests, recorded evidence, CI, the guards copied
+from agent-kits, the MIT licence and the README section.
+
+Still to do:
+
+1. **`wvm.py check-host`**: VirtualBox and its kernel modules, the
+   `vboxusers` group, Vagrant and its plugins (including plugins left under an
+   older Ruby), `.env`, credentials, and free space on the clone's and the
+   machine folder's drives. Details in "Step 4 details" below.
+2. **`wvm.py provision`**: run `vagrant_provision.bash` from the clone, in the
+   background, and report progress through `status`.
+3. **`references/provisioning.md`** and **section 2 of `SKILL.md`**: choosing
+   the drive, installing VirtualBox and Vagrant on Manjaro, moving the machine
+   folder, and asking before every `sudo` and every change to where VMs live.
+4. **Probes for setting up**, and the evidence recorded again.
+5. **Optional: update the Guest Additions** in the guest from 7.2.6 to the
+   host's 7.2.16, and see whether a VM resumed from a pause then answers on
+   its own. If it does, `start` no longer needs to restart them over WinRM.
+
+Where the build differed from this plan, the sections below say what was
+built, and [JOURNAL.md](../../JOURNAL.md) says why.
+
 ## Order of work
 
 1. **Run a command in the VM** (section 4 of the skill). The VM is running now,
@@ -36,7 +71,7 @@ at the end.
   the VirtualBox folder, has to sit on a drive with space.
 - `vagrant` failed to start ("The plugins failed to initialize correctly")
   after a Ruby upgrade. Fixed on 2026-11-09; cause and fix are in
-  [JOURNAL.md](JOURNAL.md), and the setup step has to handle it.
+  [JOURNAL.md](../../JOURNAL.md), and the setup step has to handle it.
 - `README.md`'s "Nuclear cleanup" hard-codes
   `/home/felix/.virtualbox_vms/`, which is no longer the machine folder
   (`/data/virtualbox`). `references/troubleshooting.md` uses `wvm.py where`
@@ -52,7 +87,7 @@ skills/windows-vm/
   SKILL.md
   references/
     what-this-is.md        # section 1 in full: accounts, phases, Dev Drive
-    provisioning.md        # section 2 in full: prerequisites, phases, recovery
+    provisioning.md        # section 2 in full (to do)
     troubleshooting.md     # Vagrant plugin repair, WinRM timeouts, guestcontrol errors
   scripts/
     wvm.py                 # one entry point, subcommands below
@@ -101,34 +136,36 @@ not its business (see Tests).
 
 ## `scripts/wvm.py`
 
-One script, stdlib only, `requires-python >= 3.11` (for `tomllib`). Every
+One script, `requires-python >= 3.11` (for `tomllib`). Its one dependency is
+`pywinrm`, for the two things that need WinRM. Every
 subcommand prints JSON on stdout, except `run`, which passes the guest's output
 through and exits with the guest's exit code.
 
-| Subcommand | Does | Step |
+| Subcommand | Does | State |
 | --- | --- | --- |
-| `where` | clone, machine folder, VM ID, free space | 1 |
-| `configure --clone <path>` | write the config file | 1 |
-| `status` | state (`running`, `poweroff`, `saved`, `absent`) and whether Guest Additions answer | 1 |
-| `run [--admin] [--shell powershell\|pwsh\|cmd] [--cwd <dir>] [--timeout <s>] -- <command>` | run one command in the VM | 1 |
-| `copy-to [--force] <host path> <VM path>` | copy a file or folder into the VM | 1 |
-| `copy-from [--force] <VM path> <host path>` | copy a file or folder out of the VM | 1 |
-| `start [--headless]` | boot a stopped VM or resume a paused one, then wait for Guest Additions | 2 |
-| `stop` | clean Windows shutdown, then wait | 2 |
-| `pause` | save the VM's state to disk | 2 |
-| `check-host` | VirtualBox, Vagrant and its plugins, `.env`, credentials, free space | 4 |
-| `provision` | run `vagrant_provision.bash` from the clone | 4 |
+| `where` | clone, machine folder, VM ID, free space | done |
+| `configure --clone <path>` | write the config file | done |
+| `status` | state (`running`, `poweroff`, `saved`, `absent`) and whether Guest Additions answer | done |
+| `run [--admin] [--shell powershell\|pwsh\|cmd] [--cwd <dir>] [--timeout <s>] -- <command>` | run one command in the VM | done |
+| `copy-to [--force] <host path> <VM path>` | copy a file or folder into the VM | done |
+| `copy-from [--force] <VM path> <host path>` | copy a file or folder out of the VM | done |
+| `start [--headless]` | boot a stopped VM or resume a paused one, then wait for Guest Additions | done |
+| `stop` | clean Windows shutdown, then wait | done |
+| `pause` | save the VM's state to disk | done |
+| `check-host` | VirtualBox, Vagrant and its plugins, `.env`, credentials, free space | to do |
+| `provision` | run `vagrant_provision.bash` from the clone | to do |
 
 ### `run`
 
 - Uses `VBoxManage guestcontrol <id> run`, not `vagrant winrm`. It keeps
-  working when Vagrant breaks (see [JOURNAL.md](JOURNAL.md)) and needs no
+  working when Vagrant breaks (see [JOURNAL.md](../../JOURNAL.md)) and needs no
   WinRM port forwarding.
 - Runs as `user`. Because of UAC, that is unelevated even though `user` is an
-  administrator. `--admin` runs as `admin`, and the skill says to use it only
-  for installing software or changing system settings.
-- The shell is always `powershell.exe -NoProfile -NonInteractive -Command`
-  unless `--shell` names `pwsh` or `cmd`. Windows ships `powershell.exe`, and
+  administrator. `--admin` runs as `admin` over WinRM instead, because
+  `guestcontrol` is never elevated; the skill says to use it only for
+  installing software or changing system settings.
+- The shell is always `powershell.exe -NoProfile -NonInteractive
+  -EncodedCommand` unless `--shell` names `pwsh` or `cmd`. Windows ships `powershell.exe`, and
   the setup step checks it is there.
 - Runs in the user's profile folder unless `--cwd` names another.
 - The password goes in with `--passwordfile <clone>/.credentials/<user>.txt`,
@@ -142,7 +179,7 @@ through and exits with the guest's exit code.
 - Use `VBoxManage guestcontrol <id> copyto` and `copyfrom`, so any path in the
   VM works, not only the shared folder. Folders are copied with their contents.
 - Refuse when the destination exists, naming it, unless `--force`.
-- Same account and password handling as `run`, including `--admin`.
+- Run as `user`; there is no `--admin` for copies.
 
 ### `start`, `stop` and `pause`
 
@@ -150,8 +187,12 @@ through and exits with the guest's exit code.
   call boots a stopped VM and resumes a paused one, so there is no `resume`.
   It then polls `guestcontrol run ... cmd /c exit 0` until it succeeds or 10
   minutes pass, and prints the status.
-- `stop` sends `controlvm <id> acpipowerbutton` and waits for `poweroff`.
-  `wvm.py` never offers a hard power-off.
+- `stop` runs `shutdown /s /t 0` in the guest, because Windows ignores the
+  ACPI power button while `user` is logged on, and falls back to the button
+  when the guest does not answer. It waits for `poweroff`. `wvm.py` never
+  offers a hard power-off.
+- `start` after a pause restarts Guest Additions over WinRM when the guest
+  does not answer within 20 seconds.
 - `pause` runs `controlvm <id> savestate`.
 - None of these go through Vagrant: none of them needs provisioning.
   `./vagrant.sh up` stays documented in `references/` for when a provisioner
@@ -191,7 +232,7 @@ Body, one short section each, detail in `references/`:
 - **Vagrant**: `sudo pacman -S vagrant`, then `vagrant plugin install
   vagrant-vbguest vagrant-reload`. `check-host` also catches plugins installed
   under an older Ruby and suggests the repair recorded in
-  [JOURNAL.md](JOURNAL.md).
+  [JOURNAL.md](../../JOURNAL.md).
 - **PowerShell**: the provisioning checks `powershell.exe` is present, since
   `run` relies on it.
 - `.env` from `gh auth token`, then `wvm.py provision`, which runs for hours;
@@ -289,18 +330,5 @@ fix the "Nuclear cleanup" path.
    skill and `wvm.py` know nothing of testing.
 9. Guards copied from agent-kits.
 10. Licence MIT for the whole project.
-11. Vagrant plugins repaired; recorded in [JOURNAL.md](JOURNAL.md) for the
+11. Vagrant plugins repaired; recorded in [JOURNAL.md](../../JOURNAL.md) for the
     setup step.
-
-## Status
-
-Steps 1 and 2 are done: `where`, `configure`, `status`, `run` (including
-`--admin`, elevated over WinRM), `copy-to`, `copy-from`, `start`, `stop` and
-`pause`, with sections 1, 3 and 4 of `SKILL.md`, the rule, the tests and
-recorded evidence. What VirtualBox did differently from this plan is in
-[JOURNAL.md](JOURNAL.md).
-
-## Next
-
-Step 4: `check-host`, `provision`, `references/provisioning.md` and section 2
-of `SKILL.md`.
