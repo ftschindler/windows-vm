@@ -15,6 +15,25 @@ This project provides a fully automated way to provision a Windows 11 virtual ma
 - 📦 **Pre-installed development tools** - Git, Node.js, Python, and more via WinGet
 - 🔄 **Guest Additions** - Automatically managed via vagrant-vbguest plugin
 
+## Using the VM from an agent
+
+This repository is also an [akit](https://github.com/ftschindler/federated-agent-kits)
+source. Its `windows-vm` kit, a skill and a rule, lets a coding agent on the
+host start, stop and pause the VM, run commands in it and copy files in and
+out:
+
+```sh
+uvx --from federated-agent-kits akit add --global ftschindler/windows-vm windows-vm
+```
+
+Then tell the skill where this clone is, once per machine:
+
+```sh
+uv run --script skills/windows-vm/scripts/wvm.py configure --clone "$PWD"
+```
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers working on the kit.
+
 ## Prerequisites
 
 - **VirtualBox** - Virtualization platform ([installed](https://www.virtualbox.org/) on the host)
@@ -199,8 +218,10 @@ If you encounter VirtualBox UUID conflicts, inaccessible VMs, or stuck provision
 rm -f devdrive.vdi
 
 # 3. Clean up stale VirtualBox VM directories
-rm -rf /home/felix/.virtualbox_vms/Windows\ Development\ Environment
-rm -rf /home/felix/.virtualbox_vms/windows-11-*
+# (the machine folder is shown by `VBoxManage list systemproperties`)
+MACHINE_FOLDER="$(VBoxManage list systemproperties | sed -n 's/^Default machine folder: *//p')"
+rm -rf "${MACHINE_FOLDER}/Windows Development Environment"
+rm -rf "${MACHINE_FOLDER}"/windows-11-*
 
 # 4. Verify no VMs remain registered
 VBoxManage list vms  # Should be empty
@@ -210,6 +231,7 @@ bash ./vagrant_provision.bash
 ```
 
 This resolves issues like:
+
 - `Could not rename the directory ... (VERR_ALREADY_EXISTS)`
 - `UUID {xxx} does not match the value {yyy} stored in the media registry`
 - `"<inaccessible>"` VMs in `VBoxManage list vms`
@@ -246,7 +268,7 @@ Modify the `--size` parameter (in MB) in the `VBoxManage createhd` command in th
 
 ## Contributing
 
-Contributions are welcome! This project is in the public domain (see License below).
+Contributions are welcome. This project is MIT licensed (see License below).
 
 If you have improvements or bug fixes:
 
@@ -259,9 +281,7 @@ Feel free to open issues for bugs, feature requests, or questions.
 
 ## License
 
-This project is released into the **public domain** under the [Unlicense](UNLICENSE.md).
-
-You are free to use, modify, and distribute this code for any purpose without restriction.
+This project is released under the [MIT licence](LICENSE).
 
 ## Acknowledgments
 

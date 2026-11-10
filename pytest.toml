@@ -1,0 +1,8 @@
+[pytest]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+  "conformance: the repository is shaped the way akit discovers a kit (fast, offline)",
+  "scripts: tests of the python under .scripts/ and inside the skills (no agent calls; may install dependencies)",
+  "live: drives the real Windows VM on this host; never in CI (run with `-m live`)",
+]

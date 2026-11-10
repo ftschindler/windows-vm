@@ -31,7 +31,7 @@ repos:
   hooks:
   - id: markdownlint-cli2
     types: [markdown]
-    exclude: ^(UNLICENSE\.md|\.github/ISSUE_TEMPLATE/.*)$
+    exclude: ^(LICENSE|\.github/ISSUE_TEMPLATE/.*)$
     args: [--config=.markdownlint-cli2.jsonc, --fix]
 - repo: https://github.com/jackdewinter/pymarkdown
   rev: c5755e272a13da06be38d74052658af46c1ee447  # frozen: v0.9.35
@@ -39,7 +39,7 @@ repos:
   - id: pymarkdown
     name: PyMarkdown linter
     types: [markdown]
-    exclude: ^(UNLICENSE\.md|\.github/ISSUE_TEMPLATE/.*)$
+    exclude: ^(LICENSE|\.github/ISSUE_TEMPLATE/.*)$
     args: [fix]
     pass_filenames: true
 - repo: https://github.com/tcort/markdown-link-check
@@ -48,7 +48,7 @@ repos:
   - id: markdown-link-check
     args: [--quiet, --config=.markdown_link_check_config.json]
     stages: [pre-commit]
-    exclude: ^UNLICENSE\.md$
+    exclude: ^LICENSE$
 - repo: https://github.com/Mateusz-Grzelinski/actionlint-py
   rev: v1.7.2.16
   hooks:
@@ -63,6 +63,34 @@ repos:
   hooks:
   - id: editorconfig-checker
     alias: ec
+# Python (wvm.py, the guards and the tests): lint + format
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: e8f7d69b957a30acb2c875078d5fd012de24b64c  # frozen: v0.16.7
+  hooks:
+  - id: ruff-check
+    args: [--fix]
+  - id: ruff-format
+# Kit guards, copied from ftschindler/agent-kits (see .scripts/)
+- repo: local
+  hooks:
+  - id: support-script-tests
+    name: support script tests
+    entry: uv run .scripts/run-tests.py scripts -q
+    language: system
+    files: ^(\.scripts/.*\.py|tests/.*\.py|skills/.*\.py)$
+    pass_filenames: false
+  - id: kit-layout
+    name: Every skill and rule is shaped the way akit discovers one
+    entry: uv run --script .scripts/check_kit_layout.py
+    language: system
+    files: ^(skills|rules|agents)/
+    pass_filenames: true
+  - id: kit-evidence
+    name: Every kit carries evidence matching the bytes committed
+    entry: uv run --script .scripts/check_evidence.py
+    language: system
+    files: ^(skills|rules|tests/evidence)/
+    pass_filenames: true
 # this should go last since it will fix line endings broken by other tools
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.6.0
@@ -77,6 +105,9 @@ repos:
   - id: check-json
   - id: pretty-format-json
     args: [--autofix, --no-sort-keys, --indent=4]
+    # Evidence and probes are written as canonical JSON by
+    # .scripts/record_evidence.py; reformatting would rewrite a recording.
+    exclude: ^tests/(evidence|probes)/
   - id: check-symlinks
   - id: debug-statements
   - id: fix-byte-order-marker

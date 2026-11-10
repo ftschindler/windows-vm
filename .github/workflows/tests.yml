@@ -1,0 +1,67 @@
+---
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests_${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  conformance_tests:
+    name: 🧾 (Conformance tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+      with:
+        # No pyproject.toml or lockfile: every script declares its own
+        # dependencies in a PEP 723 header, so those are what the cache keys on.
+        cache-dependency-glob: |
+          .scripts/*.py
+          skills/*/scripts/*
+
+    - name: Check the kit is shaped the way akit discovers one
+      run: uv run .scripts/run-tests.py conformance
+
+  script_tests:
+    name: 🛠 (Script tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+    - name: Setup uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
+      with:
+        cache-dependency-glob: |
+          .scripts/*.py
+          skills/*/scripts/*
+
+    - name: Test wvm.py against a fake VBoxManage, and the guards
+      run: uv run .scripts/run-tests.py scripts
+
+  tests:
+    name: 🛠 (Tests)
+    # One fixed name for branch protection to require, failing unless every
+    # job above succeeded.
+    runs-on: ubuntu-latest
+    needs: [conformance_tests, script_tests]
+    if: always()
+    timeout-minutes: 2
+    steps:
+    - name: Fail unless every job above succeeded
+      if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        }}
+      run: exit 1

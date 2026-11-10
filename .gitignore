@@ -12,3 +12,8 @@ synced/admin-ready
 
 # VirtualBox disk files
 *.vdi
+
+# Python
+__pycache__/
+.ruff_cache/
+.pytest_cache/
